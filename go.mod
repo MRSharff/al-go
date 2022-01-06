@@ -1,3 +1,3 @@
-module github.com/MRSharff/al-go
+module github.com/MRSharff/algo
 
 go 1.18
