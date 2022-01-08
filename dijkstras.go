@@ -1,7 +1,7 @@
 package main
 
 import (
-	"sort"
+	"container/heap"
 )
 
 type Node int
@@ -12,8 +12,92 @@ type Graph interface {
 	Weight(f Node, neighbor Node) int
 }
 
+type Element struct {
+	value           Node
+	priority, index int
+}
+
+type nodeHeap []*Element
+
+func (n nodeHeap) Len() int {
+	return len(n)
+}
+
+func (n nodeHeap) Less(i, j int) bool {
+	return n[i].priority < n[j].priority
+}
+
+func (n nodeHeap) Swap(i, j int) {
+	n[i], n[j] = n[j], n[i]
+	n[i].index = i
+	n[j].index = j
+}
+
+func (n *nodeHeap) Push(x interface{}) {
+	l := len(*n)
+	e := x.(*Element)
+	e.index = l
+	*n = append(*n, e)
+}
+
+func (n *nodeHeap) Pop() interface{} {
+	old := *n
+	l := len(old)
+	element := old[l-1]
+	old[l-1] = nil     // avoid memory leak
+	element.index = -1 // for safety
+	*n = old[0 : l-1]
+	return element
+}
+
+type PriorityQueue struct {
+	nodes    nodeHeap
+	elements map[Node]*Element
+}
+
+func (pq *PriorityQueue) Push(n Node, priority int) {
+	if pq.nodes == nil {
+		nh := make(nodeHeap, 0)
+		pq.nodes = nh
+	}
+	if pq.elements == nil {
+		pq.elements = make(map[Node]*Element)
+	}
+	element := &Element{n, priority, -1}
+	pq.elements[n] = element
+	heap.Push(&(pq.nodes), element)
+}
+
+func (pq *PriorityQueue) Pop() Node {
+	n := heap.Pop(&(pq.nodes)).(*Element).value
+	delete(pq.elements, n)
+	return n
+}
+
+func (pq *PriorityQueue) Update(n Node, priority int) {
+	e := pq.elements[n]
+	e.priority = priority
+	e.value = n
+	heap.Fix(&(pq.nodes), e.index)
+}
+
+func (pq *PriorityQueue) Len() int {
+	return len(pq.nodes)
+}
+
+func (pq *PriorityQueue) Contains(n Node) bool {
+	_, contains := pq.elements[n]
+	return contains
+}
+
 func Dijkstras(g Graph, start Node, end Node) int {
 	// This algorithm is a breadth first search, which means using a queue for our frontier.
+	// A priority queue will help us optimize finding the Node with minimum distance in the frontier.
+	// Even better, we can use a monotonic priority queue.
+	//
+	// https://en.wikipedia.org/wiki/Priority_queue
+	// https://en.wikipedia.org/wiki/Monotone_priority_queue
+	// First, we will implement a heap based priority queue
 
 	var distance = make(map[Node]int)
 
@@ -23,41 +107,31 @@ func Dijkstras(g Graph, start Node, end Node) int {
 	// Each node in this set has been visited at least once.
 	// The shortest distance is known when using edges we have traversed, which means
 	// we may find a shorter distance still.
-	var frontier = make(map[Node]bool)
+	var frontier PriorityQueue
 
-	frontier[start] = true
+	frontier.Push(start, 0)
 	distance[start] = 0
 
-	for len(frontier) > 0 {
-		f := min(frontier, distance)
-		delete(frontier, f)
+	for frontier.Len() > 0 {
+		f := frontier.Pop()
 		settled[f] = true
 		if f == end {
 			return distance[f]
 		}
 		for _, neighbor := range g.Neighbors(f) {
+			if settled[neighbor] {
+				continue
+			}
 			d := distance[f] + g.Weight(f, neighbor)
-			isFarOff := !settled[neighbor] && !frontier[neighbor]
-			if isFarOff {
+			if !frontier.Contains(neighbor) {
 				distance[neighbor] = d
-				frontier[neighbor] = true
+				frontier.Push(neighbor, d)
 			} else if d < distance[neighbor] {
+				frontier.Update(neighbor, d)
 				distance[neighbor] = d
 			}
-
 		}
 	}
 
 	return -1
-}
-
-func min(frontier map[Node]bool, distance map[Node]int) Node {
-	var nodes []Node
-	for n := range frontier {
-		nodes = append(nodes, n)
-	}
-	sort.Slice(nodes, func(i, j int) bool {
-		return distance[nodes[i]] < distance[nodes[j]]
-	})
-	return nodes[0]
 }

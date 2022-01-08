@@ -54,3 +54,15 @@ func TestDijkstras(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestPriorityQueue(t *testing.T) {
+	nodes := []Node{1, 2, 3, 4, 5}
+	var pq PriorityQueue
+	for i, n := range nodes {
+		pq.Push(n, len(nodes)-i)
+	}
+	for pq.Len() > 0 {
+		n := pq.Pop()
+		fmt.Println(n)
+	}
+}
