@@ -7,7 +7,6 @@ import (
 type Node int
 
 type Graph interface {
-	Nodes() []Node
 	Neighbors(f Node) []Node
 	Weight(f Node, neighbor Node) int
 }
