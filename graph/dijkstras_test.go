@@ -1,7 +1,6 @@
 package graph
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -49,7 +48,6 @@ func TestDijkstras(t *testing.T) {
 	g.edgeWeights[edge{1, 3}] = 1
 
 	shortestPath := Dijkstras(g, 0, 1)
-	fmt.Println(shortestPath)
 	if shortestPath != 2 {
 		t.Fail()
 	}
@@ -61,8 +59,11 @@ func TestPriorityQueue(t *testing.T) {
 	for i, n := range nodes {
 		pq.Push(n, len(nodes)-i)
 	}
-	for pq.Len() > 0 {
-		n := pq.Pop()
-		fmt.Println(n)
+
+	reversed := []Node{5, 4, 3, 2, 1}
+	for i, n := 0, pq.Pop(); pq.Len() > 0; i, n = i+1, pq.Pop() {
+		if reversed[i] != n {
+			t.Errorf("Expected %d to be %d\n", n, reversed[i])
+		}
 	}
 }
