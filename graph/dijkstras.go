@@ -50,8 +50,7 @@ func (n *nodeHeap) Pop() interface{} {
 }
 
 type PriorityQueue struct {
-	nodes    nodeHeap
-	elements map[Node]*Element
+	nodes nodeHeap
 }
 
 func (pq *PriorityQueue) Push(n Node, priority int) {
@@ -59,22 +58,17 @@ func (pq *PriorityQueue) Push(n Node, priority int) {
 		nh := make(nodeHeap, 0)
 		pq.nodes = nh
 	}
-	if pq.elements == nil {
-		pq.elements = make(map[Node]*Element)
-	}
 	element := &Element{n, priority, -1}
-	pq.elements[n] = element
 	heap.Push(&(pq.nodes), element)
 }
 
 func (pq *PriorityQueue) Pop() Node {
 	n := heap.Pop(&(pq.nodes)).(*Element).value
-	delete(pq.elements, n)
 	return n
 }
 
 func (pq *PriorityQueue) Update(n Node, priority int) {
-	e := pq.elements[n]
+	e := pq.nodes[n]
 	e.priority = priority
 	e.value = n
 	heap.Fix(&(pq.nodes), e.index)
@@ -82,11 +76,6 @@ func (pq *PriorityQueue) Update(n Node, priority int) {
 
 func (pq *PriorityQueue) Len() int {
 	return len(pq.nodes)
-}
-
-func (pq *PriorityQueue) Contains(n Node) bool {
-	_, contains := pq.elements[n]
-	return contains
 }
 
 func Dijkstras(g Graph, start Node, end Node) int {
@@ -122,10 +111,11 @@ func Dijkstras(g Graph, start Node, end Node) int {
 				continue
 			}
 			d := distance[f] + g.Weight(f, neighbor)
-			if !frontier.Contains(neighbor) {
+			oldD, seen := distance[neighbor]
+			if !seen {
 				distance[neighbor] = d
 				frontier.Push(neighbor, d)
-			} else if d < distance[neighbor] {
+			} else if d < oldD {
 				frontier.Update(neighbor, d)
 				distance[neighbor] = d
 			}
